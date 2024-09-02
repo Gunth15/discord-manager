@@ -25,7 +25,7 @@ class Meeting:
             return f"{self.desc};{self.locat};{self.datetime.isoformat()}"
 
     def __str__(self):
-        return f"Meeting: {self.desc} at {self.locat} at the time {self.datetime.strftime("%a %d %b, %I:%M%p")}"
+        return f"Meeting: {self.desc} at {self.locat} at the time {self.datetime.strftime("%a %d %b, %I:%M%p")} "
 
 
 class Task:
@@ -53,14 +53,13 @@ class Task:
             return f"{self.desc};{self.c_date.isoformat()};{self.d_date.isoformat()};{self.a_date.isoformat()};{self.assi_to}"
 
     def __str__(self):
-        task = f"Task: {self.desc} due on {self.d_date.strftime("%a %d %b")} and was assigned on {self.a_date.strftime("%a %d %b")}"
+        task = f"Task: {self.desc} due on {self.d_date.strftime("%a %d %b")} and was assigned on {self.a_date.strftime("%a %d %b")} "
         if self.assi_to is not None:
-            task += f"and was assigned to {self.assi_to}"
+            task += f" and was assigned to {self.assi_to} "
         return task
 
     def assign_task(self, member: str):
         self.assi_to = member
-        self.a_date = datetime.today()
 
 
 class Manager:
@@ -91,15 +90,16 @@ class Manager:
         self.meetings.append(Meeting(desc, locat, datetime))
 
     def assign_task(self, task_num: int, member: str):
-        self.tasks[task_num].assigned_to(member)
+        self.tasks[task_num - 1].assign_task(member)
 
+    # TODO: bound check these methods
     def remove_task(self, task_num: int):
         del_task = self.tasks.pop(task_num - 1)
-        return f"{del_task} deleted"
+        return f"{del_task} was deleted "
 
     def remove_meeting(self, meeting_num: int):
-        del_meeting = self.tasks.pop(meeting_num - 1)
-        return f"{del_meeting} deleted"
+        del_meeting = self.meetings.pop(meeting_num - 1)
+        return f"{del_meeting} was deleted "
 
     def fetch_backup(self):
         pass
@@ -150,14 +150,16 @@ class Manager:
         counter = 1
         task_list = ""
         for task in self.tasks:
-            task_list += f"{counter}: {str(task)} +\n "
+            task_list += f"{counter}: {str(task)} \n"
+            counter += 1
         return task_list
 
     def print_all_meetings(self):
         counter = 1
         meeting_list = ""
         for meeting in self.meetings:
-            meeting_list += f"{counter}: {str(meeting)} +\n "
+            meeting_list += f"{counter}: {str(meeting)} \n"
+            counter += 1
         return meeting_list
 
     ########## async task ############
