@@ -36,7 +36,7 @@ class Task:
     -----
     c_date: creation date of task
     d_date: due date of task
-    a_date: date task was assigned to a team member
+    a_date: date task was assigned to team
     assi_to: who task is assigned to
     -----
     """
@@ -53,9 +53,9 @@ class Task:
             return f"{self.desc};{self.c_date.isoformat()};{self.d_date.isoformat()};{self.a_date.isoformat()};{self.assi_to}"
 
     def __str__(self):
-        task = f"Task: {self.desc} due on {self.d_date.strftime("%a %d %b")}"
+        task = f"Task: {self.desc} due on {self.d_date.strftime("%a %d %b")} and was assigned on {self.a_date.strftime("%a %d %b")}"
         if self.assi_to is not None:
-            task += f"assigned to {self.assi_to} on {self.a_date.strftime("%a %d %b")}"
+            task += f"and was assigned to {self.assi_to}"
         return task
 
     def assign_task(self, member: str):
@@ -82,7 +82,9 @@ class Manager:
         self.reminder_delta = timedelta(minutes=reminder)
         self.backup_db = sqlite3.connect("manager.db")
 
-    def add_task(self, desc: str, due: date, assigned: date, assigned_to=None):
+    def add_task(
+        self, desc: str, due: date, assigned: date, assigned_to: str | None = None
+    ):
         self.tasks.append(Task(desc, due, assigned, assigned_to))
 
     def add_meeting(self, desc: str, locat: str, datetime: datetime):
@@ -193,5 +195,3 @@ class Manager:
 
             wakeup_time = datetime.today() - reminder_time
             await sleep(wakeup_time.total_seconds())
-
-    # TODO: make triggers for that take in context as a argument
