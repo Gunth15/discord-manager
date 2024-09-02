@@ -94,11 +94,19 @@ class Manager:
 
     # TODO: bound check these methods
     def remove_task(self, task_num: int):
-        del_task = self.tasks.pop(task_num - 1)
+        task_num = task_num - 1
+        if task_num <= 0 or task_num >= len(self.tasks):
+            del_task = "nothing"
+        else:
+            del_task = self.tasks.pop(task_num)
         return f"{del_task} was deleted "
 
     def remove_meeting(self, meeting_num: int):
-        del_meeting = self.meetings.pop(meeting_num - 1)
+        meeting_num = meeting_num - 1
+        if meeting_num <= 0 or meeting_num >= len(self.meetings):
+            del_meeting = "nothing"
+        else:
+            del_meeting = self.meetings.pop(meeting_num - 1)
         return f"{del_meeting} was deleted "
 
     def fetch_backup(self):
@@ -149,6 +157,10 @@ class Manager:
     def print_all_task(self):
         counter = 1
         task_list = ""
+
+        if self.tasks == []:
+            return "No task..."
+
         for task in self.tasks:
             task_list += f"{counter}: {str(task)} \n"
             counter += 1
@@ -157,6 +169,9 @@ class Manager:
     def print_all_meetings(self):
         counter = 1
         meeting_list = ""
+        if self.meetings == []:
+            return "No meetings..."
+
         for meeting in self.meetings:
             meeting_list += f"{counter}: {str(meeting)} \n"
             counter += 1
