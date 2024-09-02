@@ -93,6 +93,14 @@ class Manager:
     def assign_task(self, task_num: int, member: str):
         self.tasks[task_num].assigned_to(member)
 
+    def remove_task(self, task_num: int):
+        del_task = self.tasks.pop(task_num - 1)
+        return f"{del_task} deleted"
+
+    def remove_meeting(self, meeting_num: int):
+        del_meeting = self.tasks.pop(meeting_num - 1)
+        return f"{del_meeting} deleted"
+
     def fetch_backup(self):
         pass
 
