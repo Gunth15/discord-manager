@@ -53,6 +53,7 @@ class Task:
             return f"{self.desc};{self.c_date.isoformat()};{self.d_date.isoformat()};{self.a_date.isoformat()};{self.assi_to}"
 
     def __str__(self):
+        # TODO: Need to handle case whre due date is none
         task = f"Task: {self.desc} due on {self.d_date.strftime("%a %d %b")} and was assigned on {self.a_date.strftime("%a %d %b")} "
         if self.assi_to is not None:
             task += f" and was assigned to {self.assi_to} "
@@ -79,7 +80,9 @@ class Manager:
         self.meetings = []
         self.backup_delta = timedelta(minutes=backup)
         self.reminder_delta = timedelta(minutes=reminder)
-        self.backup_db = sqlite3.connect("manager.db")
+        self.backup_db = sqlite3.connect(
+            "manager.db", detect_types=sqlite3.PARSE_COLNAMES
+        )
 
     def add_task(
         self, desc: str, due: date, assigned: date, assigned_to: str | None = None
@@ -92,8 +95,7 @@ class Manager:
     def assign_task(self, task_num: int, member: str):
         self.tasks[task_num - 1].assign_task(member)
 
-    # TODO: bound check these methods
-    def remove_task(self, task_num: int):
+    def remove_task(self, task_num: int) -> str:
         task_num = task_num - 1
         if task_num <= 0 or task_num >= len(self.tasks):
             del_task = "nothing"
@@ -101,16 +103,61 @@ class Manager:
             del_task = self.tasks.pop(task_num)
         return f"{del_task} was deleted "
 
-    def remove_meeting(self, meeting_num: int):
+    def remove_meeting(self, meeting_num: int) -> str:
         meeting_num = meeting_num - 1
-        if meeting_num <= 0 or meeting_num >= len(self.meetings):
+        if meeting_num < 0 or meeting_num >= len(self.meetings):
             del_meeting = "nothing"
         else:
             del_meeting = self.meetings.pop(meeting_num - 1)
         return f"{del_meeting} was deleted "
 
-    def fetch_backup(self):
-        pass
+    def print_all_task(self) -> str:
+        counter = 1
+        task_list = ""
+
+        if self.tasks == []:
+            return "No task..."
+
+        for task in self.tasks:
+            task_list += f"{counter}: {str(task)} \n"
+            counter += 1
+        return task_list
+
+    def print_all_meetings(self) -> str:
+        counter = 1
+        meeting_list = ""
+        if self.meetings == []:
+            return "No meetings..."
+
+        for meeting in self.meetings:
+            meeting_list += f"{counter}: {str(meeting)} \n"
+            counter += 1
+        return meeting_list
+
+    # NOTE:database must be created
+
+    ########## sqlite3 backup related methods #########
+    # TODO: Make method to clear db cache
+    def recover(self):
+        print("Recovering data")
+        self.meetings = self.backup_db.execute("SELECT * FROM meetings").fetchall()
+        self.tasks = self.backup_db.execute("SELECT * FROM tasks").fetchall()
+        print("Successfully recovered backup!!! ")
+
+    def backup(self):
+        # backup to db
+        print("Backing up")
+        print("first")
+        self.backup_db.executemany(
+            "INSERT INTO tasks (desc,c_date,d_date,a_date,assi_to) VALUES (?,?,?,?)",
+            (self.tasks,),
+        )
+        print("second")
+        self.backup_db.executemany(
+            "INSERT INTO meetings (desc, locat, datetime) VALUES (?,?,?)",
+            (self.meetings,),
+        )
+        print("Successfully backed up!!! ")
 
     def change_backup_time(
         self,
@@ -121,7 +168,7 @@ class Manager:
         minutes=0,
         hours=0,
         weeks=0,
-    ):
+    ) -> str:
         self.backup_delta = timedelta(
             days, seconds, microseconds, milliseconds, minutes, hours, weeks
         )
@@ -139,7 +186,7 @@ class Manager:
         minutes=0,
         hours=0,
         weeks=0,
-    ):
+    ) -> str:
         self.reminder_delta = timedelta(
             days, seconds, microseconds, milliseconds, minutes, hours, weeks
         )
@@ -147,35 +194,6 @@ class Manager:
         return "Reminder frequency changed to {} seconds".format(
             self.reminder_delta.total_seconds()
         )
-
-    # NOTE:database must be created
-    def backup(self):
-        # backup to db
-        self.backup_db.executemany("INSERT INTO tasks VALUES ?", self.tasks)
-        self.backup_db.executemany("INSERT INTO meetings VALUES ?", self.meetings)
-
-    def print_all_task(self):
-        counter = 1
-        task_list = ""
-
-        if self.tasks == []:
-            return "No task..."
-
-        for task in self.tasks:
-            task_list += f"{counter}: {str(task)} \n"
-            counter += 1
-        return task_list
-
-    def print_all_meetings(self):
-        counter = 1
-        meeting_list = ""
-        if self.meetings == []:
-            return "No meetings..."
-
-        for meeting in self.meetings:
-            meeting_list += f"{counter}: {str(meeting)} \n"
-            counter += 1
-        return meeting_list
 
     ########## async task ############
     async def backup_trigger(self):
@@ -220,3 +238,18 @@ class Manager:
 
             wakeup_time = datetime.today() - reminder_time
             await sleep(wakeup_time.total_seconds())
+
+
+# sqlite3 converters
+def convert_meetings(meeting):
+    desc, locat, datetime = meeting.split(b";")
+    return Meeting(desc, locat, datetime.fromisoformat(datetime))
+
+
+def convert_tasks(task):
+    desc, d_date, a_date, assi_to = task.split(b";")
+    return Task(desc, date.fromisoformat(d_date), date.fromisoformat(a_date), assi_to)
+
+
+sqlite3.register_converter("meetings", convert_meetings)
+sqlite3.register_converter("tasks", convert_tasks)
