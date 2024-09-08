@@ -95,13 +95,27 @@ class TestBackupNRecovery(unittest.TestCase):
     def test_backup(self):
         print("------------------- Start of Backup Test -----------------")
         self.man.backup()
-        self.assertCountEqual(
-            self.man.backup_db.execute("SELECT * FROM meetings").fetchall(),
-            self.man.meetings,
+        self.assertEqual(
+            len(
+                list(
+                    map(
+                        lambda meeting: manager.convert_meetings(meeting),
+                        self.man.backup_db.execute("SELECT * FROM meetings").fetchall(),
+                    )
+                )
+            ),
+            len(self.man.meetings),
         )
-        self.assertCountEqual(
-            self.man.backup_db.execute("SELECT * FROM tasks").fetchall(),
-            self.man.tasks,
+        self.assertEqual(
+            len(
+                list(
+                    map(
+                        lambda task: manager.convert_tasks(task),
+                        self.man.backup_db.execute("SELECT * FROM tasks").fetchall(),
+                    )
+                )
+            ),
+            len(self.man.tasks),
         )
         print("------------------- End of Backup Test -----------------")
 

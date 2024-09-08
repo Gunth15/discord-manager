@@ -20,12 +20,15 @@ class Meeting:
         self.locat = locat
         self.datetime = datetime
 
-    def __conform__(self, protocol):
-        if protocol is sqlite3.PrepareProtocol:
-            return f"{self.desc};{self.locat};{self.datetime.isoformat()}"
+    #    def __conform__(self, protocol):
+    #        if protocol is sqlite3.PrepareProtocol:
+    #            return (self.desc, self.locat, self.datetime.isoformat())
 
     def __str__(self):
         return f"Meeting: {self.desc} at {self.locat} at the time {self.datetime.strftime("%a %d %b, %I:%M%p")} "
+
+    def to_tuple(self):
+        return (self.desc, self.locat, self.datetime.isoformat())
 
 
 class Task:
@@ -41,16 +44,29 @@ class Task:
     -----
     """
 
-    def __init__(self, desc: str, d_date: date, a_date: date, assi_to: str | None):
+    def __init__(
+        self,
+        desc: str,
+        d_date: date,
+        a_date: date,
+        assi_to: str | None,
+        c_date=date.today(),
+    ):
         self.desc = desc
-        self.c_date = datetime.today()
+        self.c_date = c_date
         self.d_date = d_date
         self.a_date = a_date
         self.assi_to = assi_to
 
     def __conform__(self, protocol):
         if protocol is sqlite3.PrepareProtocol:
-            return f"{self.desc};{self.c_date.isoformat()};{self.d_date.isoformat()};{self.a_date.isoformat()};{self.assi_to}"
+            return (
+                self.desc,
+                self.c_date.isoformat(),
+                self.d_date.isoformat(),
+                self.a_date.isoformat(),
+                self.assi_to,
+            )
 
     def __str__(self):
         # TODO: Need to handle case whre due date is none
@@ -61,6 +77,15 @@ class Task:
 
     def assign_task(self, member: str):
         self.assi_to = member
+
+    def to_tuple(self):
+        return (
+            self.desc,
+            self.c_date.isoformat(),
+            self.d_date.isoformat(),
+            self.a_date.isoformat(),
+            self.assi_to,
+        )
 
 
 class Manager:
@@ -147,15 +172,13 @@ class Manager:
     def backup(self):
         # backup to db
         print("Backing up")
-        print("first")
         self.backup_db.executemany(
-            "INSERT INTO tasks (desc,c_date,d_date,a_date,assi_to) VALUES (?,?,?,?)",
-            (self.tasks,),
+            "INSERT INTO tasks (desc,c_date,d_date,a_date,assi_to) VALUES (?,?,?,?,?)",
+            list(map(lambda task: task.to_tuple(), self.tasks)),
         )
-        print("second")
         self.backup_db.executemany(
             "INSERT INTO meetings (desc, locat, datetime) VALUES (?,?,?)",
-            (self.meetings,),
+            list(map(lambda meeting: meeting.to_tuple(), self.meetings)),
         )
         print("Successfully backed up!!! ")
 
@@ -242,14 +265,16 @@ class Manager:
 
 # sqlite3 converters
 def convert_meetings(meeting):
-    desc, locat, datetime = meeting.split(b";")
-    return Meeting(desc, locat, datetime.fromisoformat(datetime))
+    desc, locat, date_time, _ = meeting
+    return Meeting(desc, locat, datetime.fromisoformat(date_time))
 
 
 def convert_tasks(task):
-    desc, d_date, a_date, assi_to = task.split(b";")
-    return Task(desc, date.fromisoformat(d_date), date.fromisoformat(a_date), assi_to)
-
-
-sqlite3.register_converter("meetings", convert_meetings)
-sqlite3.register_converter("tasks", convert_tasks)
+    desc, c_date, d_date, a_date, assi_to, _ = task
+    return Task(
+        desc,
+        date.fromisoformat(d_date),
+        date.fromisoformat(a_date),
+        assi_to,
+        c_date=date.fromisoformat(c_date),
+    )
